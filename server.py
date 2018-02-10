@@ -2,6 +2,7 @@
 import socket
 import string
 import ssl
+import sqlite3
 
 
 def send_error(socket, error_code):
