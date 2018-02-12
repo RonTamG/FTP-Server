@@ -1,3 +1,5 @@
+# supports 'SYST' command
+
 import socket
 import string
 import ssl
