@@ -67,7 +67,7 @@ def delete(client ,path_to_file):
 
 
 def pwd(client, args):
-    succesful = '257 %s is working directory\r\n'
+    succesful = '257 "%s" is working directory\r\n'
     client.send(succesful % os.getcwd())
 
 
@@ -90,9 +90,12 @@ def get_features(client, args):
         client.send(feature + '\r\n')
     client.send('211 End\r\n')
 
+def test(client, args):
+    #### test
+    client.send('200 \r\n')
 
 
-KNOWN_COMMANDS = {'USER': user_check, 'FEAT': get_features, 'SYST': syst_command, 'CWD': cwd, 'PWD': pwd, 'DELE': delete}
+KNOWN_COMMANDS = {'USER': user_check, 'FEAT': get_features, 'SYST': syst_command, 'CWD': cwd, 'PWD': pwd, 'DELE': delete, 'TYPE': test}
 
 
 def main_loop(client):
