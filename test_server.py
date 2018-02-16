@@ -4,127 +4,127 @@ import socket
 import string
 import ssl
 import platform
+import os
+from database import Users
 
-USERNAME = 1
+
+
+PATH = 0
+ORIGINAL_DIR = os.getcwd()
+
+USERNAME = 0
+PASSWORD = 1
 USER = 0
 PASS = 1
 
+COMMAND = 0
+ARGS = 1
+DATA = 1024
 
-def SYST_command(socket):
+
+
+def syst_command(socket, args):
     ok_code = '215'
     socket.send(ok_code + " " + platform.system() + "\r\n")
 
 
-def send_error(socket, error_code):
-    error_message_code = '404'
-    if error_code == 1:
-        socket.send(error_message_code + ' password/username not in the system.')
+def send_error(error_code):
+    return error_code + ' \r\n'
 
 
-def login_succesful(socket, extra_data):
-    message = "Login succesful, all clear"
-    print message
-    login_succesful_code = '230'
-    socket.send(login_succesful_code + message + '\r\n')
+def user_check(client ,args):
+    request_password = '331 Please specify password\r\n'
+    username = args[USERNAME].replace('\r\n', '')
 
-
-def send_code(socket, code):
-    print code
-    socket.send(code + '\r\n')
-
-
-def get_user_pass():
-    #extracts the usernames and passwords from the file database file
-    users_pass = {}
-    with open('accounts.txt', 'r') as database:
-        user_list = database.readlines()
-        print user_list
-        for line in user_list:
-            user_and_pass = line.split('~')
-            print user_and_pass
-            users_pass[user_and_pass[USER]] = user_and_pass[PASS].replace('\n', '')
-
-    print users_pass
-    return users_pass
-
-
-def test_stuff(c_socket):
-    c_socket.send("331 Please specify the password.\r\n")
-    print c_socket.recv(1024)
-
-
-def Authenticate(c_socket):
-    # establish connecition and request USER input
-    establish_coms = c_socket.recv(1024)
-    while "USER" not in establish_coms:
-        c_socket.send("530 Please login with USER and PASS.\r\n")
-        establish_coms = c_socket.recv(1024)
-
-    # get dictionary of users with their passwords
-    users_pass = get_user_pass()
-
-    print users_pass
-
-    username = establish_coms.split('USER')
-    username = username[USERNAME]
-
-    if " " in username:
-        username = username.replace(" ", "")
-    if '\r\n' in username:
-        username = username.replace('\r\n', '')
-
-    #authenticates username for further communication
-    if username in users_pass.keys():
-        c_socket.send("331 Please specify the password.\r\n")
-    #        login_succesful(c_socket, "welcome " + username + ". need password")
-
-    #recieving password and authenticating it
-    password = c_socket.recv(1024).replace('\r\n', '')
-    if "PASS" in password:
-        password = password.split('PASS')[1].replace(" ", '')
-        print "pass = " + password
-    print users_pass[username]
-    print users_pass[username] == password
-    if users_pass[username] == password:
-        login_succesful(c_socket, "Access granted...")
+    client.send(request_password)
+    response = client.recv(DATA)
+    if 'PASS' in response:
+        password = response.split()[PASSWORD].replace('\r\n', '')
+        return pass_check(client, password ,username)
     else:
-        send_error(c_socket, 1)
+        return send_error('503')
+    
 
 
-def get_features():
+def pass_check(client, password, username):
+    succesful_login = '230 Login succesful, all clear\r\n'
+    wrong_password = '430 Wrong password\r\n'
+
+    print username, password
+    users = Users()
+    if (username, password) in users.get_users_pass():
+        client.send(succesful_login)
+    else:
+        client.send(wrong_password)
+
+
+def delete(client ,path_to_file):
+    if os.path.isfile(path_to_file):
+        os.remove(path_to_file)
+        client.send('250 Requested file has been deleted\r\n')
+    else:
+        client.send(send_error('550'))  # file not found
+
+
+def pwd(client, args):
+    client.send(os.getcwd())
+
+
+def cwd(client, args):
+    succesful_change = '250 Succesfully changed directory\r\n'
+
+    if len(args) > 0:
+        path = ORIGINAL_DIR + args[PATH]
+        if ORIGINAL_DIR in path and os.path.exists(path):
+            os.chdir(path)
+            client.send(succesful_change)
+        else:
+            client.send(send_error('550'))
+
+
+def get_features(client, args):
     return '211 None\r\n'
 
 
-KNOWN_COMMANDS = {'USER': Authenticate, 'PASS': None, 'FEAT': get_features, 'SYST': SYST_command}
+
+KNOWN_COMMANDS = {'USER': user_check, 'FEAT': get_features, 'SYST': syst_command, 'CWD': cwd, 'PWD': pwd, 'DELE': delete}
 
 
-def main_loop(c_socket):
-    response = c_socket.recv(1024)
-    print response
-    command = response.split()[0]
-    print command
-    while command not in KNOWN_COMMANDS.keys():
-        c_socket.send('500 Unknown coomand or invalid syntax\r\n')
-        response = c_socket.recv(1024)
-        command = response.split()[0]
-        print response
+def main_loop(client):
+    done = False
+    request = client.recv(DATA)
+    while not done:
+        # get command and args
+        try:
+            command = request.split()[COMMAND]
+            args = request.split()[ARGS::]
+        # if command doesn't have arguments
+        except IndexError as e:
+            print 'IndexERROR: ' + str(e)
+            command = request.replace('\r\n', '')
+            args = []
 
-    c_socket.send(KNOWN_COMMANDS[command](c_socket))
+        # if in known commands, run it
+        try:
+            KNOWN_COMMANDS[command](client, args)
+        # else send unknown command
+        except Exception as e:
+            print 'CommandERROR: ' + str(e)
+            client.send(send_error('500'))
+
+        # continue loop
+        request = client.recv(DATA)
 
 
-#	c.send("221")
+def main():
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    p = int(raw_input("-->"))
+    s.bind(("127.0.0.1", p))
+    s.listen(1)
+    client, address = s.accept()
+    client.send('220 welcome\r\n')
+    main_loop(client)
 
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-p = int(raw_input("-->"))
-s.bind(("127.0.0.1", p))
-s.listen(1)
-try:
-    c = s.accept()[0]
-    c.send("220 \r\n")
-    Authenticate(c)
-    main_loop(c)
 
-except Exception as e:
-    print e
-finally:
-    s.close()
+if __name__ == '__main__':
+    main()
