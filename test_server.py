@@ -67,7 +67,8 @@ def delete(client ,path_to_file):
 
 
 def pwd(client, args):
-    client.send(os.getcwd())
+    succesful = '257 %s is working directory\r\n'
+    client.send(succesful % os.getcwd())
 
 
 def cwd(client, args):
@@ -83,7 +84,11 @@ def cwd(client, args):
 
 
 def get_features(client, args):
-    return '211 None\r\n'
+    client.send('211-Features:\r\n')
+    feat_list = ['feat'] # 'rest' command to remember
+    for feature in feat_list:
+        client.send(feature + '\r\n')
+    client.send('211 End\r\n')
 
 
 
@@ -95,15 +100,13 @@ def main_loop(client):
     request = client.recv(DATA)
     while not done:
         # get command and args
-        try:
+        if len(request.split()) > 1:
             command = request.split()[COMMAND]
             args = request.split()[ARGS::]
         # if command doesn't have arguments
-        except IndexError as e:
-            print 'IndexERROR: ' + str(e)
+        else:
             command = request.replace('\r\n', '')
             args = []
-
         # if in known commands, run it
         try:
             KNOWN_COMMANDS[command](client, args)
