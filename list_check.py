@@ -26,21 +26,22 @@ def file_detail(file):
     return return_string
 
 
-def list(args):
+def list_command(client, args):
     if os.path.isdir(args):
-        return dir_files(args)
+        d =  dir_files(args)
+        print [d]
+        return d
     if os.path.isfile(args):
-        return file_detail(args)
+        d = file_detail(args)
+        print d
+        return d
 
 
 commands = {'LIST': list}
 
 
 def main():
-    while True:
-        c = raw_input('$-->')
-        command = c.split()
-        print commands[command[0]](command[1])
+    list_command('S', os.getcwd())
 
 
 if __name__ == '__main__':
