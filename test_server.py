@@ -28,6 +28,13 @@ PORT_RANGE_MAX = 254
 PORT_RANGE_MIN = 192
 
 
+def Help_command(client, args):
+    global KNOWN_COMMANDS
+    a = "supported commands: \n"
+    for i in KNOWN_COMMANDS.keys():
+        a += i + '\n'
+    client.send('211' + a + '\r\n')
+
 
 def syst_command(socket, args):
     ok_code = '215'
@@ -196,7 +203,11 @@ def get_list(args):
         d = file_detail(args)
         print d
         return d
-# end of for list
+# end of for list\
+KNOWN_COMMANDS = {'USER': user_check, 'FEAT': get_features, 'SYST': syst_command, 'CWD': cwd, 'PWD': pwd, 'DELE': delete, 'TYPE': set_binary_flag
+                ,'PASV': passive_connection, 'LIST': list_command, 'PORT': active_connection, 'HELP': Help_command}
+
+
 
 
 def list_command(client, args):
@@ -219,9 +230,6 @@ def list_command(client, args):
 
     print 'check 1'
     client.send('226 Directory send OK.\r\n')
-
-KNOWN_COMMANDS = {'USER': user_check, 'FEAT': get_features, 'SYST': syst_command, 'CWD': cwd, 'PWD': pwd, 'DELE': delete, 'TYPE': set_binary_flag
-                ,'PASV': passive_connection, 'LIST': list_command, 'PORT': active_connection}
 
 
 def main_loop(client):
