@@ -28,6 +28,27 @@ PORT_RANGE_MAX = 254
 PORT_RANGE_MIN = 192
 
 
+def rename(client, args):
+    #args[0] = file name to change from
+    wait = 'waiting on file new name ('args[0]+')\r\n'
+    if os.path.isfile(args[0]):
+        print wait
+        client.send('350' + wait)
+        rename = client.recv(1024)
+        if rename.split()[0] == 'RNTO':
+            new_name = rename.split()[1]
+            os.rename(args[0], new_name)
+        else:
+            client.send(send_error('500 Not recieved file\'s new name'))
+            print 'Error recieving new name'
+            return
+    else:
+        client.send(send_error('500 Not a file'))
+        print 'No such file exists'
+        return
+
+
+
 def Help_command(client, args):
     global KNOWN_COMMANDS
     a = "supported commands: \n"
