@@ -7,6 +7,7 @@ import platform
 import os
 from database import Users
 from random import randint
+import time
 
 from list_check import list_command
 
@@ -22,6 +23,9 @@ PASS = 1
 COMMAND = 0
 ARGS = 1
 DATA = 1024
+
+PORT_RANGE_MAX = 254
+PORT_RANGE_MIN = 192
 
 
 
@@ -70,6 +74,7 @@ def delete(client ,path_to_file):
 def pwd(client, args):
     succesful = '257 "%s" is working directory\r\n'
     client.send(succesful % os.getcwd())
+    print 'hola'
 
 
 def cwd(client, args):
@@ -104,6 +109,13 @@ def set_binary_flag(client, args):
     client.send('200 flag changed to %s\r\n' % str(args[0]))
 
 
+def passive_port():
+	p1 = randint(PORT_RANGE_MIN, PORT_RANGE_MAX)
+	p2 = randint(PORT_RANGE_MIN, PORT_RANGE_MAX)
+
+	port = p1 * 256 + p2
+
+	return str(p1), str(p2), port
 
 def passive_connection(client, args):
     """
@@ -116,17 +128,14 @@ def passive_connection(client, args):
     ip_to_send = ','.join(ip.split('.'))
 #    port = randint(2024, 50000)
     global port
-    port = 27311
-    port_to_send = '107,175'
-
-    #### add while loop when i get an algorithm for ports
+    port = passive_port()
+    port_to_send = ','.join(port[:2])
+    port = port[2]
     try:
-        global t_client
-        transfer_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        transfer_socket.bind((ip, port))
-        transfer_socket.listen(1)
-        t_client, t_address = transfer_socket.accept()
         to_send = '227 Entering passive mode (%s,%s)\r\n' % (ip_to_send, port_to_send)
+        client.send(to_send)
+        return
+        
 
     except socket.error as e:
         print e
@@ -134,7 +143,24 @@ def passive_connection(client, args):
 
 
     client.send(to_send)
-        
+
+
+def active_connection(client, args):
+	global ip
+	global port
+
+	connection = args[0]
+	connection = connection.split(',')
+	ip = '.'.join(connection[:4])
+	print 'ip: ' + ip
+	try:
+		print connection[4], connection[5]
+		port = int(connection[4]) * 256 + int(connection[5])
+	except ValueError as e:
+		print e
+		client.send_error('501')
+
+	client.send('200 Connected\r\n')
 
 
 # for list
@@ -174,23 +200,28 @@ def get_list(args):
 
 
 def list_command(client, args):
-    list = get_list(os.getcwd())
-    client.send('150 here comes directory listing\r\n')
-
+    file_list = 'FTP Data (%s' % get_list(os.getcwd())
+#    file_list = 'FTP Data (-rw-r--r--    1 0        0        1073741824000 Feb 19  2016 1000GB.zip\r\n-rw-r--r--    1 0        0        107374182400 Feb 19  2016 100GB.zip\r\n-rw-r--r--    1 0        0          102400 Feb 19  2016 100KB.zip\r\n-rw-r--r--  '
     global ip
     global port
-    global t_client
+    print str(ip)+ ', '+ str(port)
+    transfer_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    transfer_socket.bind((ip, port))
+    transfer_socket.listen(1)
+    print 'check 2'
+    transfer_client, transfer_address = transfer_socket.accept()
+    print 'check 3'
 
-    print str(ip) + ',' + str(port)
+    client.send('150 here comes directory listing\r\n')
+    print file_list
+    transfer_client.send(file_list)
+    transfer_client.close()
 
-    t_client.send(list)
-    t_client.close()
-
-    client.send('226 Directory send OK\r\n')
-
+    print 'check 1'
+    client.send('226 Directory send OK.\r\n')
 
 KNOWN_COMMANDS = {'USER': user_check, 'FEAT': get_features, 'SYST': syst_command, 'CWD': cwd, 'PWD': pwd, 'DELE': delete, 'TYPE': set_binary_flag
-                ,'PASV': passive_connection, 'LIST': list_command}
+                ,'PASV': passive_connection, 'LIST': list_command, 'PORT': active_connection}
 
 
 def main_loop(client):
@@ -217,6 +248,27 @@ def main_loop(client):
         # continue loop
         request = client.recv(DATA).replace('\r\n', '')
 
+def main_loop_Test(client):
+    done = False
+    request = client.recv(DATA).replace('\r\n', '')
+    while not done:
+        print 'request = ' + request
+        # get command and args
+        if len(request.split()) > 1:
+            command = request.split()[COMMAND]
+            args = request.split()[ARGS::]
+        # if command doesn't have arguments
+        else:
+            command = request
+            args = []
+        # if in known commands, run it
+        if command != 'AUTH':
+        	KNOWN_COMMANDS[command](client, args)
+    	else:
+    	# else send unknown command
+        	client.send(send_error('500'))
+    	# continue loop
+    	request = client.recv(DATA).replace('\r\n', '')
 
 def main():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -225,10 +277,9 @@ def main():
     s.listen(1)
     client, address = s.accept()
     client.send('220 welcome\r\n')
-    main_loop(client)
-
-    client.close()
+    main_loop_Test(client)
     s.close()
+
 
 
 if __name__ == '__main__':
