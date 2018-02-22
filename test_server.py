@@ -9,8 +9,6 @@ from database import Users
 from random import randint
 import time
 
-from list_check import list_command
-
 
 PATH = 0
 ORIGINAL_DIR = os.getcwd()
@@ -38,7 +36,7 @@ def send_error(error_code):
     return error_code + ' \r\n'
 
 
-def user_check(client ,args):
+def user_check(client, args):
     request_password = '331 Please specify password\r\n'
     username = args[USERNAME]
 
@@ -46,11 +44,10 @@ def user_check(client ,args):
     response = client.recv(DATA)
     if 'PASS' in response:
         password = response.split()[PASSWORD]
-        return pass_check(client, password ,username)
+        return pass_check(client, password, username)
     else:
         return send_error('503')
     
-
 
 def pass_check(client, password, username):
     succesful_login = '230 Login succesful, all clear\r\n'
@@ -81,8 +78,9 @@ def cwd(client, args):
     succesful_change = '250 Succesfully changed directory\r\n'
 
     if len(args) > 0:
-        path = ORIGINAL_DIR + args[PATH]
-        if ORIGINAL_DIR in path and os.path.exists(path):
+        path = ORIGINAL_DIR + '\\' + args[PATH]
+        print path
+        if os.path.exists(path):
             os.chdir(path)
             client.send(succesful_change)
         else:
@@ -110,12 +108,13 @@ def set_binary_flag(client, args):
 
 
 def passive_port():
-	p1 = randint(PORT_RANGE_MIN, PORT_RANGE_MAX)
-	p2 = randint(PORT_RANGE_MIN, PORT_RANGE_MAX)
+    p1 = randint(PORT_RANGE_MIN, PORT_RANGE_MAX)
+    p2 = randint(PORT_RANGE_MIN, PORT_RANGE_MAX)
 
-	port = p1 * 256 + p2
+    port = p1 * 256 + p2
 
-	return str(p1), str(p2), port
+    return str(p1), str(p2), port
+
 
 def passive_connection(client, args):
     """
@@ -135,7 +134,6 @@ def passive_connection(client, args):
         to_send = '227 Entering passive mode (%s,%s)\r\n' % (ip_to_send, port_to_send)
         client.send(to_send)
         return
-        
 
     except socket.error as e:
         print e
@@ -146,21 +144,21 @@ def passive_connection(client, args):
 
 
 def active_connection(client, args):
-	global ip
-	global port
+    global ip
+    global port
 
-	connection = args[0]
-	connection = connection.split(',')
-	ip = '.'.join(connection[:4])
-	print 'ip: ' + ip
-	try:
-		print connection[4], connection[5]
-		port = int(connection[4]) * 256 + int(connection[5])
-	except ValueError as e:
-		print e
-		client.send_error('501')
+    connection = args[0]
+    connection = connection.split(',')
+    ip = '.'.join(connection[:4])
+    print 'ip: ' + ip
+    try:
+        print connection[4], connection[5]
+        port = int(connection[4]) * 256 + int(connection[5])
+    except ValueError as e:
+        print e
+        client.send_error('501')
 
-	client.send('200 Connected\r\n')
+    client.send('200 Connected\r\n')
 
 
 # for list
@@ -189,7 +187,7 @@ def file_detail(file):
 
 def get_list(args):
     if os.path.isdir(args):
-        d =  dir_files(args)
+        d = dir_files(args)
         print [d]
         return d
     if os.path.isfile(args):
@@ -200,8 +198,8 @@ def get_list(args):
 
 
 def list_command(client, args):
-    file_list = 'FTP Data (%s' % get_list(os.getcwd())
-#    file_list = 'FTP Data (-rw-r--r--    1 0        0        1073741824000 Feb 19  2016 1000GB.zip\r\n-rw-r--r--    1 0        0        107374182400 Feb 19  2016 100GB.zip\r\n-rw-r--r--    1 0        0          102400 Feb 19  2016 100KB.zip\r\n-rw-r--r--  '
+    # file_list = 'FTP Data (%s' % get_list(os.getcwd())
+    file_list = '-rw-r--r-- 100 1 Feb 19  2016 files.rar\r\ndrwxr-xr-x 1 owner group 1739046 Jan 29 2018 Extras\r\n'
     global ip
     global port
     print str(ip)+ ', '+ str(port)
@@ -220,8 +218,8 @@ def list_command(client, args):
     print 'check 1'
     client.send('226 Directory send OK.\r\n')
 
-KNOWN_COMMANDS = {'USER': user_check, 'FEAT': get_features, 'SYST': syst_command, 'CWD': cwd, 'PWD': pwd, 'DELE': delete, 'TYPE': set_binary_flag
-                ,'PASV': passive_connection, 'LIST': list_command, 'PORT': active_connection}
+KNOWN_COMMANDS = {'USER': user_check, 'FEAT': get_features, 'SYST': syst_command, 'CWD': cwd, 'PWD': pwd, 'DELE': delete,
+                  'TYPE': set_binary_flag, 'PASV': passive_connection, 'LIST': list_command, 'PORT': active_connection}
 
 
 def main_loop(client):
@@ -248,6 +246,7 @@ def main_loop(client):
         # continue loop
         request = client.recv(DATA).replace('\r\n', '')
 
+
 def main_loop_Test(client):
     done = False
     request = client.recv(DATA).replace('\r\n', '')
@@ -263,18 +262,18 @@ def main_loop_Test(client):
             args = []
         # if in known commands, run it
         if command != 'AUTH':
-        	KNOWN_COMMANDS[command](client, args)
-    	else:
-    	# else send unknown command
-        	client.send(send_error('500'))
-    	# continue loop
-    	request = client.recv(DATA).replace('\r\n', '')
+            KNOWN_COMMANDS[command](client, args)
+        else:
+        # else send unknown command
+            client.send(send_error('500'))
+        # continue loop
+        request = client.recv(DATA).replace('\r\n', '')
 
 def main():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     p = int(raw_input("-->"))
     s.bind(("127.0.0.1", p))
-    s.listen(1)
+    s.listen(5)
     client, address = s.accept()
     client.send('220 welcome\r\n')
     main_loop_Test(client)
