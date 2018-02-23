@@ -30,7 +30,8 @@ PORT_RANGE_MIN = 192
 
 def rename(client, args):
     #args[0] = file name to change from
-    wait = 'waiting on file new name ('args[0]+')\r\n'
+    wait = 'waiting on file new name ('
+    args[0] + ')\r\n'
     if os.path.isfile(args[0]):
         print wait
         client.send('350' + wait)
@@ -46,7 +47,6 @@ def rename(client, args):
         client.send(send_error('500 Not a file'))
         print 'No such file exists'
         return
-
 
 
 def Help_command(client, args):
@@ -66,7 +66,7 @@ def send_error(error_code):
     return error_code + ' \r\n'
 
 
-def user_check(client ,args):
+def user_check(client, args):
     request_password = '331 Please specify password\r\n'
     username = args[USERNAME]
 
@@ -74,10 +74,9 @@ def user_check(client ,args):
     response = client.recv(DATA)
     if 'PASS' in response:
         password = response.split()[PASSWORD]
-        return pass_check(client, password ,username)
+        return pass_check(client, password, username)
     else:
         return send_error('503')
-    
 
 
 def pass_check(client, password, username):
@@ -91,7 +90,7 @@ def pass_check(client, password, username):
         client.send(wrong_password)
 
 
-def delete(client ,path_to_file):
+def delete(client, path_to_file):
     if os.path.isfile(path_to_file):
         os.remove(path_to_file)
         client.send('250 Requested file has been deleted\r\n')
@@ -119,7 +118,7 @@ def cwd(client, args):
 
 def get_features(client, args):
     client.send('211-Features:\r\n')
-    feat_list = ['feat'] # 'rest' command to remember
+    feat_list = ['feat']  # 'rest' command to remember
     for feature in feat_list:
         client.send(feature + '\r\n')
     client.send('211 End\r\n')
@@ -138,12 +137,13 @@ def set_binary_flag(client, args):
 
 
 def passive_port():
-	p1 = randint(PORT_RANGE_MIN, PORT_RANGE_MAX)
-	p2 = randint(PORT_RANGE_MIN, PORT_RANGE_MAX)
+    p1 = randint(PORT_RANGE_MIN, PORT_RANGE_MAX)
+    p2 = randint(PORT_RANGE_MIN, PORT_RANGE_MAX)
 
-	port = p1 * 256 + p2
+    port = p1 * 256 + p2
 
-	return str(p1), str(p2), port
+    return str(p1), str(p2), port
+
 
 def passive_connection(client, args):
     """
@@ -154,7 +154,7 @@ def passive_connection(client, args):
     global ip
     ip = '127.0.0.1'
     ip_to_send = ','.join(ip.split('.'))
-#    port = randint(2024, 50000)
+    #    port = randint(2024, 50000)
     global port
     port = passive_port()
     port_to_send = ','.join(port[:2])
@@ -163,45 +163,48 @@ def passive_connection(client, args):
         to_send = '227 Entering passive mode (%s,%s)\r\n' % (ip_to_send, port_to_send)
         client.send(to_send)
         return
-        
+
 
     except socket.error as e:
         print e
         to_send = '421 Falied to enter passive mode\r\n'
 
-
     client.send(to_send)
 
 
 def active_connection(client, args):
-	global ip
-	global port
+    global ip
+    global port
 
-	connection = args[0]
-	connection = connection.split(',')
-	ip = '.'.join(connection[:4])
-	print 'ip: ' + ip
-	try:
-		print connection[4], connection[5]
-		port = int(connection[4]) * 256 + int(connection[5])
-	except ValueError as e:
-		print e
-		client.send_error('501')
+    connection = args[0]
+    connection = connection.split(',')
+    ip = '.'.join(connection[:4])
+    print 'ip: ' + ip
+    try:
+        print connection[4], connection[5]
+        port = int(connection[4]) * 256 + int(connection[5])
+    except ValueError as e:
+        print e
+        client.send_error('501')
 
-	client.send('200 Connected\r\n')
+    client.send('200 Connected\r\n')
 
 
 # for list
 def dir_files(dir):
-    currected_files = ''
+    corrected_files = ''
+    tab = '		'
+    space = ' '
+    add = '-rw-r--r-- 1 owner group'
+
     files = os.listdir(dir)
     for i in files:
-        if '.' in i:
-            i = i.split('.')
-            currected_files += i[0] + '{.' + i[1] + ' file}\n'
-        else:
-            currected_files += i + '\n'
-    return currected_files
+        full_path = dir + '\\' + i
+        print full_path
+        corrected_files += add + tab + str(os.path.getsize(full_path)) + space + \
+                           str(time.asctime(time.localtime(os.path.getctime(full_path)))) + space + i + tab
+
+    return corrected_files
 
 
 def file_detail(file):
@@ -217,26 +220,26 @@ def file_detail(file):
 
 def get_list(args):
     if os.path.isdir(args):
-        d =  dir_files(args)
+        d = dir_files(args)
         print [d]
         return d
     if os.path.isfile(args):
         d = file_detail(args)
         print d
         return d
+
 # end of for list\
-KNOWN_COMMANDS = {'USER': user_check, 'FEAT': get_features, 'SYST': syst_command, 'CWD': cwd, 'PWD': pwd, 'DELE': delete, 'TYPE': set_binary_flag
-                ,'PASV': passive_connection, 'LIST': list_command, 'PORT': active_connection, 'HELP': Help_command}
-
-
+KNOWN_COMMANDS = {'USER': user_check, 'FEAT': get_features, 'SYST': syst_command, 'CWD': cwd, 'PWD': pwd,
+                  'DELE': delete, 'TYPE': set_binary_flag
+    , 'PASV': passive_connection, 'LIST': list_command, 'PORT': active_connection, 'HELP': Help_command}
 
 
 def list_command(client, args):
     file_list = 'FTP Data (%s' % get_list(os.getcwd())
-#    file_list = 'FTP Data (-rw-r--r--    1 0        0        1073741824000 Feb 19  2016 1000GB.zip\r\n-rw-r--r--    1 0        0        107374182400 Feb 19  2016 100GB.zip\r\n-rw-r--r--    1 0        0          102400 Feb 19  2016 100KB.zip\r\n-rw-r--r--  '
+    #    file_list = 'FTP Data (-rw-r--r--    1 0        0        1073741824000 Feb 19  2016 1000GB.zip\r\n-rw-r--r--    1 0        0        107374182400 Feb 19  2016 100GB.zip\r\n-rw-r--r--    1 0        0          102400 Feb 19  2016 100KB.zip\r\n-rw-r--r--  '
     global ip
     global port
-    print str(ip)+ ', '+ str(port)
+    print str(ip) + ', ' + str(port)
     transfer_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     transfer_socket.bind((ip, port))
     transfer_socket.listen(1)
@@ -277,6 +280,7 @@ def main_loop(client):
         # continue loop
         request = client.recv(DATA).replace('\r\n', '')
 
+
 def main_loop_Test(client):
     done = False
     request = client.recv(DATA).replace('\r\n', '')
@@ -292,12 +296,13 @@ def main_loop_Test(client):
             args = []
         # if in known commands, run it
         if command != 'AUTH':
-        	KNOWN_COMMANDS[command](client, args)
-    	else:
-    	# else send unknown command
-        	client.send(send_error('500'))
-    	# continue loop
-    	request = client.recv(DATA).replace('\r\n', '')
+            KNOWN_COMMANDS[command](client, args)
+        else:
+            # else send unknown command
+            client.send(send_error('500'))
+        # continue loop
+        request = client.recv(DATA).replace('\r\n', '')
+
 
 def main():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -308,7 +313,6 @@ def main():
     client.send('220 welcome\r\n')
     main_loop_Test(client)
     s.close()
-
 
 
 if __name__ == '__main__':
