@@ -129,9 +129,12 @@ def set_binary_flag(client, args):
     """
     global binary_flag
     binary_flag = str(args[0])
-    print 'Binary flag now set to: ' + binary_flag
+    if binary_flag == 'I':
+        binary_flag = 'b'
+    else:
+        binary_flag = ''
 
-    client.send('200 flag changed to %s\r\n' % str(args[0]))
+    client.send('200 flag changed\r\n')
 
 
 def passive_port():
@@ -220,25 +223,41 @@ def list_command(client, args):
 #    file_list = '-rw-r--r-- 100 1 Feb 19  2016 files.rar\r\ndrwxr-xr-x 1 owner group 1739046 Jan 29 2018 Extras\r\n'
     global ip
     global port
-    print str(ip) + ', ' + str(port)
     transfer_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     transfer_socket.bind((ip, port))
     transfer_socket.listen(1)
-    print 'check 2'
     transfer_client, transfer_address = transfer_socket.accept()
-    print 'check 3'
 
     client.send('150 here comes directory listing\r\n')
     print file_list
     transfer_client.send(file_list)
     transfer_client.close()
 
-    print 'check 1'
     client.send('226 Directory send OK.\r\n')
+
+
+def retrieve_file(client, args):
+    global ip
+    global port
+    global binary_flag
+    path = ORIGINAL_DIR + '\\Files\\' + args[PATH]
+    print path  # ###check
+    if os.path.isfile(path):
+        transfer_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        transfer_server.bind((ip, port))
+        transfer_server.listen(1)
+        transfer_client, transfer_address = transfer_server.accept()
+        with open(path, 'r' + binary_flag) as my_file:
+            contents = my_file.read()
+
+        transfer_client.send(contents)
+        transfer_client.close()
+        client.send('226 Transfer complete.\r\n')
+
 
 # end of for list\
 KNOWN_COMMANDS = {'USER': user_check, 'FEAT': get_features, 'SYST': syst_command, 'CWD': cwd, 'PWD': pwd, 'DELE': delete, 'TYPE': set_binary_flag
-                 , 'PASV': passive_connection, 'LIST': list_command, 'PORT': active_connection, 'HELP': help_command}
+                  , 'PASV': passive_connection, 'LIST': list_command, 'PORT': active_connection, 'HELP': help_command, 'RETR': retrieve_file}
 
 
 def main_loop(client):
