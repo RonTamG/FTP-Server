@@ -26,6 +26,34 @@ PORT_RANGE_MAX = 254
 PORT_RANGE_MIN = 192
 
 
+def rename(client, args):
+    #args[0] = file name to change from
+    wait = 'waiting on file new name ('args[0]+')\r\n'
+    if os.path.isfile(args[0]):
+        print wait
+        client.send('350' + wait)
+        rename = client.recv(1024)
+        if rename.split()[0] == 'RNTO':
+            new_name = rename.split()[1]
+            os.rename(args[0], new_name)
+        else:
+            client.send(send_error('500 Not recieved file\'s new name'))
+            print 'Error recieving new name'
+            return
+    else:
+        client.send(send_error('500 Not a file'))
+        print 'No such file exists'
+        return
+
+
+
+def Help_command(client, args):
+    global KNOWN_COMMANDS
+    a = "supported commands: \n"
+    for i in KNOWN_COMMANDS.keys():
+        a += i + '\n'
+    client.send('211' + a + '\r\n')
+
 
 def syst_command(socket, args):
     ok_code = '215'
@@ -47,7 +75,7 @@ def user_check(client, args):
         return pass_check(client, password, username)
     else:
         return send_error('503')
-    
+
 
 def pass_check(client, password, username):
     succesful_login = '230 Login succesful, all clear\r\n'
@@ -194,12 +222,12 @@ def get_list(args):
         d = file_detail(args)
         print d
         return d
-# end of for list
 
 
 def list_command(client, args):
     # file_list = 'FTP Data (%s' % get_list(os.getcwd())
     file_list = '-rw-r--r-- 100 1 Feb 19  2016 files.rar\r\ndrwxr-xr-x 1 owner group 1739046 Jan 29 2018 Extras\r\n'
+
     global ip
     global port
     print str(ip)+ ', '+ str(port)
@@ -218,8 +246,9 @@ def list_command(client, args):
     print 'check 1'
     client.send('226 Directory send OK.\r\n')
 
-KNOWN_COMMANDS = {'USER': user_check, 'FEAT': get_features, 'SYST': syst_command, 'CWD': cwd, 'PWD': pwd, 'DELE': delete,
-                  'TYPE': set_binary_flag, 'PASV': passive_connection, 'LIST': list_command, 'PORT': active_connection}
+# end of for list\
+KNOWN_COMMANDS = {'USER': user_check, 'FEAT': get_features, 'SYST': syst_command, 'CWD': cwd, 'PWD': pwd, 'DELE': delete, 'TYPE': set_binary_flag
+                 , 'PASV': passive_connection, 'LIST': list_command, 'PORT': active_connection, 'HELP': Help_command}
 
 
 def main_loop(client):
@@ -268,6 +297,7 @@ def main_loop_Test(client):
             client.send(send_error('500'))
         # continue loop
         request = client.recv(DATA).replace('\r\n', '')
+
 
 def main():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
