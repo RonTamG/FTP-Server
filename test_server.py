@@ -28,7 +28,7 @@ PORT_RANGE_MIN = 192
 
 def rename(client, args):
     #args[0] = file name to change from
-    wait = 'waiting on file new name ('args[0]+')\r\n'
+    wait = "waiting on file new name ('args[0] + ')\r\n"
     if os.path.isfile(args[0]):
         print wait
         client.send('350' + wait)
@@ -46,8 +46,7 @@ def rename(client, args):
         return
 
 
-
-def Help_command(client, args):
+def help_command(client, args):
     global KNOWN_COMMANDS
     a = "supported commands: \n"
     for i in KNOWN_COMMANDS.keys():
@@ -55,9 +54,9 @@ def Help_command(client, args):
     client.send('211' + a + '\r\n')
 
 
-def syst_command(socket, args):
+def syst_command(client, args):
     ok_code = '215'
-    socket.send(ok_code + " " + platform.system() + "\r\n")
+    client.send(ok_code + " " + platform.system() + "\r\n")
 
 
 def send_error(error_code):
@@ -88,7 +87,7 @@ def pass_check(client, password, username):
         client.send(wrong_password)
 
 
-def delete(client ,path_to_file):
+def delete(client, path_to_file):
     if os.path.isfile(path_to_file):
         os.remove(path_to_file)
         client.send('250 Requested file has been deleted\r\n')
@@ -98,7 +97,7 @@ def delete(client ,path_to_file):
 
 def pwd(client, args):
     succesful = '257 "%s" is working directory\r\n'
-    client.send(succesful % os.getcwd())
+    client.send(succesful % (os.getcwd() + '\Files'))
     print 'hola'
 
 
@@ -108,7 +107,7 @@ def cwd(client, args):
     if len(args) > 0:
         path = ORIGINAL_DIR + '\\' + args[PATH]
         print path
-        if os.path.exists(path):
+        if os.path.exists(path) and 'Files' in path:
             os.chdir(path)
             client.send(succesful_change)
         else:
@@ -117,7 +116,7 @@ def cwd(client, args):
 
 def get_features(client, args):
     client.send('211-Features:\r\n')
-    feat_list = ['feat'] # 'rest' command to remember
+    feat_list = ['feat']  # 'rest' command to remember
     for feature in feat_list:
         client.send(feature + '\r\n')
     client.send('211 End\r\n')
@@ -153,7 +152,7 @@ def passive_connection(client, args):
     global ip
     ip = '127.0.0.1'
     ip_to_send = ','.join(ip.split('.'))
-#    port = randint(2024, 50000)
+    #    port = randint(2024, 50000)
     global port
     port = passive_port()
     port_to_send = ','.join(port[:2])
@@ -162,11 +161,9 @@ def passive_connection(client, args):
         to_send = '227 Entering passive mode (%s,%s)\r\n' % (ip_to_send, port_to_send)
         client.send(to_send)
         return
-
     except socket.error as e:
         print e
         to_send = '421 Falied to enter passive mode\r\n'
-
 
     client.send(to_send)
 
@@ -190,27 +187,25 @@ def active_connection(client, args):
 
 
 # for list
-def dir_files(dir):
-    currected_files = ''
-    files = os.listdir(dir)
+def dir_files(directory):
+    print directory
+    corrected_files = ''
+    tab = '		'
+    space = ' '
+    file_add = '-rw-r--r-- 1 owner group'
+    dir_add = 'drwxr-xr-x 1 owner group'
+
+    files = os.listdir(directory)
     for i in files:
-        if '.' in i:
-            i = i.split('.')
-            currected_files += i[0] + '{.' + i[1] + ' file}\n'
-        else:
-            currected_files += i + '\n'
-    return currected_files
-
-
-def file_detail(file):
-    return_string = ""
-    info = ['last accessed: ' + time.asctime(time.localtime(os.path.getatime(file))),
-            'last metadata change: ' + time.asctime(time.localtime(os.path.getctime(file))),
-            'last modified: ' + time.asctime(time.localtime(os.path.getmtime(file))),
-            'file size: ' + time.asctime(time.localtime(os.path.getsize(file)))]
-    for i in info:
-        return_string += i + '\n'
-    return return_string
+        if os.path.isfile(directory + '\\' + i):
+            full_path = directory + '\\' + i
+            corrected_files += file_add + tab + str(os.path.getsize(full_path)) + space + \
+                str(time.strftime('%b %d %H:%M', time.localtime(os.path.getctime(full_path)))) + space + i + '\r\n'
+        if os.path.isdir(directory + '\\' + i):
+            full_path = directory + '\\' + i
+            corrected_files += dir_add + tab + str(os.path.getsize(full_path)) + space + \
+                str(time.strftime('%b %d %H:%M', time.localtime(os.path.getctime(full_path)))) + space + i + '\r\n'
+    return corrected_files
 
 
 def get_list(args):
@@ -218,19 +213,14 @@ def get_list(args):
         d = dir_files(args)
         print [d]
         return d
-    if os.path.isfile(args):
-        d = file_detail(args)
-        print d
-        return d
 
 
 def list_command(client, args):
-    # file_list = 'FTP Data (%s' % get_list(os.getcwd())
-    file_list = '-rw-r--r-- 100 1 Feb 19  2016 files.rar\r\ndrwxr-xr-x 1 owner group 1739046 Jan 29 2018 Extras\r\n'
-
+    file_list = get_list(os.getcwd() + '\Files')
+#    file_list = '-rw-r--r-- 100 1 Feb 19  2016 files.rar\r\ndrwxr-xr-x 1 owner group 1739046 Jan 29 2018 Extras\r\n'
     global ip
     global port
-    print str(ip)+ ', '+ str(port)
+    print str(ip) + ', ' + str(port)
     transfer_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     transfer_socket.bind((ip, port))
     transfer_socket.listen(1)
@@ -248,7 +238,7 @@ def list_command(client, args):
 
 # end of for list\
 KNOWN_COMMANDS = {'USER': user_check, 'FEAT': get_features, 'SYST': syst_command, 'CWD': cwd, 'PWD': pwd, 'DELE': delete, 'TYPE': set_binary_flag
-                 , 'PASV': passive_connection, 'LIST': list_command, 'PORT': active_connection, 'HELP': Help_command}
+                 , 'PASV': passive_connection, 'LIST': list_command, 'PORT': active_connection, 'HELP': help_command}
 
 
 def main_loop(client):
@@ -293,7 +283,7 @@ def main_loop_Test(client):
         if command != 'AUTH':
             KNOWN_COMMANDS[command](client, args)
         else:
-        # else send unknown command
+            # else send unknown command
             client.send(send_error('500'))
         # continue loop
         request = client.recv(DATA).replace('\r\n', '')
@@ -308,7 +298,6 @@ def main():
     client.send('220 welcome\r\n')
     main_loop_Test(client)
     s.close()
-
 
 
 if __name__ == '__main__':

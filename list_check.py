@@ -4,44 +4,37 @@ import time
 
 
 def dir_files(dir):
-    currected_files = ''
+    print dir
+    corrected_files = ''
+    tab = '		'
+    space = ' '
+    file_add = '-rw-r--r-- 1 owner group'
+    dir_add = 'rwxr-xr-x 1 owner group'
+
     files = os.listdir(dir)
     for i in files:
-        if '.' in i:
-            i = i.split('.')
-            currected_files += i[0] + '{.' + i[1] + ' file}\n'
-        else:
-            currected_files += i + '\n'
-    return currected_files
+        if os.path.isfile(dir + '\\' + i):
+            full_path = dir + '\\' + i
+            corrected_files += file_add + tab + str(os.path.getsize(full_path)) + space + \
+                str(time.strftime('%b %d %H:%M', time.localtime(os.path.getctime(full_path)))) + space + i + '\r\n'
+        if os.path.isdir(dir + '\\' + i):
+            full_path = dir + '\\' + i
+            corrected_files += dir_add + tab + str(os.path.getsize(full_path)) + space + \
+                str(time.strftime('%b %d %H:%M', time.localtime(os.path.getctime(full_path)))) + space + i + '\r\n'
+    return corrected_files
 
 
-def file_detail(file):
-    return_string = ""
-    info = ['last accessed: ' + time.asctime(time.localtime(os.path.getatime(file))),
-            'last metadata change: ' + time.asctime(time.localtime(os.path.getctime(file))),
-            'last modified: ' + time.asctime(time.localtime(os.path.getmtime(file))),
-            'file size: ' + time.asctime(time.localtime(os.path.getsize(file)))]
-    for i in info:
-        return_string += i + '\n'
-    return return_string
-
-
-def list_command(client, args):
+def get_list(args):
     if os.path.isdir(args):
-        d =  dir_files(args)
-        print [d]
+        d = dir_files(args)
         return d
-    if os.path.isfile(args):
-        d = file_detail(args)
-        print d
-        return d
-
 
 commands = {'LIST': list}
 
 
 def main():
-    list_command('S', os.getcwd())
+    print get_list(os.getcwd() + '\\Files')
+
 
 
 if __name__ == '__main__':
