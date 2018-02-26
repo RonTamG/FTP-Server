@@ -25,6 +25,9 @@ DATA = 1024
 PORT_RANGE_MAX = 254
 PORT_RANGE_MIN = 192
 
+#IP = socket.gethostbyname(socket.gethostname()) doesn't work because of local network, gives wrong ip address
+IP = '192.168.1.17'
+
 
 def rename(client, args):
     #args[0] = file name to change from
@@ -98,7 +101,6 @@ def delete(client, path_to_file):
 def pwd(client, args):
     succesful = '257 "%s" is working directory\r\n'
     client.send(succesful % (os.getcwd() + '\Files'))
-    print 'hola'
 
 
 def cwd(client, args):
@@ -106,7 +108,6 @@ def cwd(client, args):
 
     if len(args) > 0:
         path = ORIGINAL_DIR + '\\' + args[PATH]
-        print path
         if os.path.exists(path) and 'Files' in path:
             os.chdir(path)
             client.send(succesful_change)
@@ -141,21 +142,18 @@ def passive_port():
     p1 = randint(PORT_RANGE_MIN, PORT_RANGE_MAX)
     p2 = randint(PORT_RANGE_MIN, PORT_RANGE_MAX)
 
-    port = p1 * 256 + p2
+    port_to_send = p1 * 256 + p2
 
-    return str(p1), str(p2), port
+    return str(p1), str(p2), port_to_send
 
 
 def passive_connection(client, args):
     """
     Passive connection type: server sends client on which port to send data.
     """
-    print 'passive'
-
     global ip
-    ip = '127.0.0.1'
+    ip = IP
     ip_to_send = ','.join(ip.split('.'))
-    #    port = randint(2024, 50000)
     global port
     port = passive_port()
     port_to_send = ','.join(port[:2])
@@ -240,7 +238,7 @@ def retrieve_file(client, args):
     global ip
     global port
     global binary_flag
-    path = ORIGINAL_DIR + '\\Files\\' + args[PATH]
+    path = ORIGINAL_DIR + '\\Files\\' + ' '.join(args[PATH:])
     print path  # ###check
     if os.path.isfile(path):
         transfer_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -311,7 +309,7 @@ def main_loop_Test(client):
 def main():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     p = int(raw_input("-->"))
-    s.bind(("127.0.0.1", p))
+    s.bind(("0.0.0.0", p))
     s.listen(5)
     client, address = s.accept()
     client.send('220 welcome\r\n')
