@@ -26,7 +26,8 @@ PORT_RANGE_MAX = 254
 PORT_RANGE_MIN = 192
 
 #IP = socket.gethostbyname(socket.gethostname()) doesn't work because of local network, gives wrong ip address
-IP = '192.168.1.17'
+#IP = '192.168.1.17'
+IP = 'localhost'
 
 
 def rename(client, args):
@@ -151,6 +152,7 @@ def passive_connection(client, args):
     """
     Passive connection type: server sends client on which port to send data.
     """
+    global connection_type
     global ip
     ip = IP
     ip_to_send = ','.join(ip.split('.'))
@@ -161,6 +163,7 @@ def passive_connection(client, args):
     try:
         to_send = '227 Entering passive mode (%s,%s)\r\n' % (ip_to_send, port_to_send)
         client.send(to_send)
+        connection_type = 'Passive'
         return
     except socket.error as e:
         print e
@@ -172,6 +175,7 @@ def passive_connection(client, args):
 def active_connection(client, args):
     global ip
     global port
+    global connection_type
 
     connection = args[0]
     connection = connection.split(',')
@@ -180,9 +184,11 @@ def active_connection(client, args):
     try:
         print connection[4], connection[5]
         port = int(connection[4]) * 256 + int(connection[5])
+        connection_type = 'Active'
     except ValueError as e:
         print e
         client.send_error('501')
+        return
 
     client.send('200 Connected\r\n')
 
@@ -218,18 +224,29 @@ def get_list(args):
 
 def list_command(client, args):
     file_list = get_list(os.getcwd() + '\Files')
-#    file_list = '-rw-r--r-- 100 1 Feb 19  2016 files.rar\r\ndrwxr-xr-x 1 owner group 1739046 Jan 29 2018 Extras\r\n'
     global ip
     global port
+    global connection_type
+
     transfer_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    transfer_socket.bind((ip, port))
-    transfer_socket.listen(1)
-    transfer_client, transfer_address = transfer_socket.accept()
+    if connection_type == 'Passive':
+        transfer_socket.bind((ip, port))
+        transfer_socket.listen(1)
+        transfer_client, transfer_address = transfer_socket.accept()
+    elif connection_type == 'Active':
+        transfer_socket.connect((ip, port))
+        transfer_client = transfer_socket
+    else:
+        client.send("425 Can't open data connection\r\n")
 
     client.send('150 here comes directory listing\r\n')
     print file_list
     transfer_client.send(file_list)
     transfer_client.close()
+    try:
+        transfer_socket.close()
+    except Exception:
+        pass
 
     client.send('226 Directory send OK.\r\n')
 
@@ -238,8 +255,9 @@ def retrieve_file(client, args):
     global ip
     global port
     global binary_flag
+    global connection_type
+
     path = ORIGINAL_DIR + '\\Files\\' + ' '.join(args[PATH:])
-    print path  # ###check
     if os.path.isfile(path):
         transfer_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         transfer_server.bind((ip, port))
