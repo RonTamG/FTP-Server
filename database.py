@@ -1,9 +1,6 @@
 import sqlite3 as sql
 
 
-USERSNAME = 0
-PASSWORD = 1
-
 def execute_command(command, database, cursor):
     try:
         cursor.execute(command)
@@ -13,8 +10,9 @@ def execute_command(command, database, cursor):
     
 
 class Users(object):
-    def __init__(self, **kwargs):
-        self.database = sql.connect('users.db')
+    def __init__(self, origin_dir):
+        print origin_dir + '\\' + 'users.db'
+        self.database = sql.connect(origin_dir + '\\' + 'users.db')
         self.cursor = self.database.cursor()
         
         # Create table
@@ -31,5 +29,5 @@ class Users(object):
         return results
 
     def add_user(self, username, password):
-    	sql_command = "INSERT INTO User (name, password) VALUES ('%s', '%s')" % (username, password)
-    	print execute_command(sql_command, self.database, self.cursor)
+        sql_command = "INSERT INTO User (name, password) VALUES ('%s', '%s')" % (username, password)
+        print execute_command(sql_command, self.database, self.cursor)
