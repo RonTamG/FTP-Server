@@ -25,16 +25,17 @@ def get_command_args(request):
 
 
 class Server(Commands):
-    def __init__(self, my_ip=socket.gethostbyname(socket.gethostname())):
+    def __init__(self, port, logger, my_ip=socket.gethostbyname(socket.gethostname())):
         super(Server, self).__init__(my_ip)
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        p = int(raw_input("port-->"))
-        self.server_socket.bind(("0.0.0.0", p))
+        self.server_socket.bind(("0.0.0.0", port))
         self.server_socket.listen(1)
         self.connections = []
+        # output gui
+        self.logger = logger
 
     def run(self):
-        while True:
+        while True:  # change to specified number
             client, address = self.server_socket.accept()
             client.send('220 welcome\r\n')
 
@@ -49,15 +50,15 @@ class Server(Commands):
         while True:
             print 'request = ' + request
 
-            if not request:
+            if not request: # or command === quit
                 self.connections.remove(client)
                 client.close()
-                print 'client disconnected'
+                self.logger.add_text('client disconnected')
                 break
 
             command, args = get_command_args(request)
             try:
-                self.command_dict[command](client, args)
+                self.logger.add_text(str(self.command_dict[command](client, args)))
             except KeyError as e:
                 print e
                 client.send('500 command unknown\r\n')
@@ -79,7 +80,7 @@ def main():
     #     current_thread.daemon = True
     #     current_thread.start()
     #     connections.append(client)
-    s = Server()
+    s = Server(6000, None)
     s.run()
 
 

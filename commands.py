@@ -27,8 +27,8 @@ BYTES_TO_READ = 8
 
 #USERS = Users().get_users_pass()
 
-#IP = socket.gethostbyname(socket.gethostname())  # doesn't work because of local network, gives wrong ip address
-IP = '192.168.1.17'
+IP = socket.gethostbyname(socket.gethostname())  # doesn't work because of local network, gives wrong ip address
+#IP = '192.168.1.17'
 #IP = 'localhost'
 
 
@@ -99,11 +99,13 @@ class Commands(object):
                              'RETR': self.retrieve_file,
                              'CDUP': self.cwd,
                              'SIZE': self.return_size,
-                             'REST': self.reset_transfer}
+                             'REST': self.reset_transfer,
+                             'RNFR': self.rename}
 
     @staticmethod
     def rename(client, args):
         """
+        RNFR and RNTO FTP commands
         """
         #args[0] = file name to change from
         wait = "waiting on file new name ('args[0] + ')\r\n"
@@ -256,7 +258,7 @@ class Commands(object):
         server sends client on
         which port to send data.
         """
-        self.ip = IP
+#        self.ip = IP
         ip_to_send = ','.join(self.ip.split('.'))
         self.port = passive_port()
         port_to_send = ','.join(self.port[:2])
@@ -378,24 +380,6 @@ class Commands(object):
         """
         path = ' '.join(args)
         client.send('213 %s\r\n' % str(os.path.getsize(path)))
-
-
-# end of for list\
-# KNOWN_COMMANDS = {'USER': user_check,
-#                   'FEAT': get_features,
-#                   'SYST': syst_command,
-#                   'CWD': cwd,
-#                   'PWD': pwd,
-#                   'DELE': delete,
-#                   'TYPE': set_binary_flag,
-#                   'PASV': passive_connection,
-#                   'LIST': list_command,
-#                   'PORT': active_connection,
-#                   'HELP': help_command,
-#                   'RETR': retrieve_file,
-#                   'CDUP': cwd,
-#                   'SIZE': return_size,
-#                   'REST': reset_transfer}
 
 
 def main():
