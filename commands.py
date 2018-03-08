@@ -28,7 +28,7 @@ BYTES_TO_READ = 8
 #USERS = Users().get_users_pass()
 
 #IP = socket.gethostbyname(socket.gethostname())  # doesn't work because of local network, gives wrong ip address
-IP = '192.168.1.17'
+#IP = '192.168.1.17'
 #IP = 'localhost'
 
 
@@ -99,7 +99,8 @@ class Commands(object):
                              'RETR': self.retrieve_file,
                              'CDUP': self.cwd,
                              'SIZE': self.return_size,
-                             'REST': self.reset_transfer}
+                             'REST': self.reset_transfer,
+                             'STOR': self.store_something}
 
     @staticmethod
     def rename(client, args):
@@ -256,7 +257,6 @@ class Commands(object):
         server sends client on
         which port to send data.
         """
-        self.ip = IP
         ip_to_send = ','.join(self.ip.split('.'))
         self.port = passive_port()
         port_to_send = ','.join(self.port[:2])
@@ -378,6 +378,18 @@ class Commands(object):
         """
         path = ' '.join(args)
         client.send('213 %s\r\n' % str(os.path.getsize(path)))
+
+    def store_something(self, client, args):
+        stop = False
+        transfer_client, transfer_socket = self.transfer_connection()
+        with open(args[0], 'w'+self.binary_flag) as upload:
+            while not stop:
+                try:
+                    upload.write(transfer_client.recv(1024))
+                except socket.error:
+                    client.send('226 transfer complete\r\n')
+                    stop = True
+        print 'process ended'
 
 
 # end of for list\
