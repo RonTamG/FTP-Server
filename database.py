@@ -31,3 +31,7 @@ class Users(object):
     def add_user(self, username, password):
         sql_command = "INSERT INTO User (name, password) VALUES ('%s', '%s')" % (username, password)
         print execute_command(sql_command, self.database, self.cursor)
+
+    def remove_user(self, username, password):
+        sql_command = "DELETE FROM User WHERE name == '%s' AND password == '%s'" % (username, password)
+        return execute_command(sql_command, self.database, self.cursor)
