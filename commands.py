@@ -155,7 +155,8 @@ class Commands(object):
             password = response.split()[PASSWORD]
             return self.pass_check(client, password, username)
         else:
-            return client.send('503 Commands sent in wrong order\r\n')
+            client.send('503 Commands sent in wrong order\r\n')
+            return '503 Commands sent in wrong order'
 
     def pass_check(self, client, password, username):
         """
@@ -167,9 +168,10 @@ class Commands(object):
 
         if (username, password) in self.user_data:
             client.send(succesful_login)
-            print 'Client logged in with user: %s pass: %s' % (username, password)
+            return 'Client logged in with user: %s pass: %s' % (username, password)
         else:
             client.send(wrong_password)
+            return 'Client sent wrong username or password'
 
     @staticmethod
     def delete(client, args):
@@ -194,9 +196,9 @@ class Commands(object):
         succesful = '257 "%s" is working directory\r\n'
         current_dir = os.getcwd()
         if FILE_DIR not in current_dir:
-            client.send(succesful % ORIGINAL_DIR)
+            client.send(succesful % '\\')  # Files dir
         else:
-            client.send(succesful % (os.getcwd()))
+            client.send(succesful % (os.getcwd().replace(ORIGINAL_DIR, '')))
 
     @staticmethod
     def cwd(client, args):
