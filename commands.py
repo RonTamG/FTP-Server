@@ -32,6 +32,13 @@ def send_error(error_code):
     return error_code + ' \r\n'
 
 
+def nothing_value(string1):
+    x = True
+    for i in string1:
+        x = x and i == ' '
+    return x
+
+
 def passive_port():
     """
     Return port for passive connection
@@ -61,11 +68,13 @@ def dir_files(directory):
         if os.path.isfile(directory + '\\' + i):
             full_path = directory + '\\' + i
             corrected_files += file_add + tab + str(os.path.getsize(full_path)) + space + \
-                str(time.strftime('%b %d %H:%M', time.localtime(os.path.getctime(full_path)))) + space + i + '\r\n'
+                               str(time.strftime('%b %d %H:%M',
+                                                 time.localtime(os.path.getctime(full_path)))) + space + i + '\r\n'
         if os.path.isdir(directory + '\\' + i):
             full_path = directory + '\\' + i
             corrected_files += dir_add + tab + str(os.path.getsize(full_path)) + space + \
-                str(time.strftime('%b %d %H:%M', time.localtime(os.path.getctime(full_path)))) + space + i + '\r\n'
+                               str(time.strftime('%b %d %H:%M',
+                                                 time.localtime(os.path.getctime(full_path)))) + space + i + '\r\n'
     return corrected_files
 
 
@@ -73,6 +82,7 @@ class Commands(object):
     """
     Handler of commands for the ftp server
     """
+
     def __init__(self, my_ip):
         self.binary_flag = ''
         self.connection_type = ''
@@ -113,6 +123,7 @@ class Commands(object):
             if name.split()[0] == 'RNTO':
                 new_name = name.split()[1]
                 os.rename(args[0], new_name)
+                return 'A file got a new name(old = %s, new = %s)' % (args[0], new_name)
             else:
                 client.send(send_error('500 Not recieved file\'s new name'))
                 print 'Error recieving new name'
@@ -130,6 +141,7 @@ class Commands(object):
         for i in self.command_dict.keys():
             a += i + '\n'
         client.send('211' + a + '\r\n')
+        return 'A help command was issued.'
 
     @staticmethod
     def syst_command(client, args):
@@ -139,6 +151,7 @@ class Commands(object):
         """
         ok_code = '215'
         client.send(ok_code + " " + platform.system() + "\r\n")
+        return 'SYST command initiated. %s returned' % (platform.system())
 
     def user_check(self, client, args):  # user check
         """
@@ -155,8 +168,7 @@ class Commands(object):
             password = response.split()[PASSWORD]
             return self.pass_check(client, password, username)
         else:
-            client.send('503 Commands sent in wrong order\r\n')
-            return '503 Commands sent in wrong order'
+            return client.send('503 Commands sent in wrong order\r\n')
 
     def pass_check(self, client, password, username):
         """
@@ -168,10 +180,9 @@ class Commands(object):
 
         if (username, password) in self.user_data:
             client.send(succesful_login)
-            return 'Client logged in with user: %s pass: %s' % (username, password)
+            print 'Client logged in with user: %s pass: %s.' % (username, password)
         else:
             client.send(wrong_password)
-            return 'Client sent wrong username or password'
 
     @staticmethod
     def delete(client, args):
@@ -183,8 +194,10 @@ class Commands(object):
         if os.path.isfile(path_to_file):
             os.remove(path_to_file)
             client.send('250 Requested file has been deleted\r\n')
+            return path_to_file + ' has been deleted.'
         else:
             client.send('550 File not found\r\n')
+            return 'There was an attempt to delete a file yet the file was not found.'
 
     @staticmethod
     def pwd(client, args):
@@ -196,9 +209,11 @@ class Commands(object):
         succesful = '257 "%s" is working directory\r\n'
         current_dir = os.getcwd()
         if FILE_DIR not in current_dir:
-            client.send(succesful % '\\')  # Files dir
+            client.send(succesful % ORIGINAL_DIR)
+            return 'PWD command initiated. %s returned.' % ORIGINAL_DIR
         else:
-            client.send(succesful % (os.getcwd().replace(ORIGINAL_DIR, '')))
+            client.send(succesful % (os.getcwd()))
+            return 'PWD command initiated. %s returned.' % os.getcwd()
 
     @staticmethod
     def cwd(client, args):
@@ -221,8 +236,10 @@ class Commands(object):
         if os.path.exists(path) and FILE_DIR in path:
             os.chdir(path)
             client.send(succesful_change)
+            return 'Entered %s directory' % FILE_DIR
         else:
             client.send('550 Directory does not exist\r\n')
+            return 'CWD error - not able to enter directory. '
 
     @staticmethod
     def get_features(client, args):
@@ -250,6 +267,7 @@ class Commands(object):
             self.binary_flag = ''
 
         client.send('200 flag changed\r\n')
+        return 'Binary flag changed.'
 
     def passive_connection(self, client, args):
         """
@@ -261,16 +279,19 @@ class Commands(object):
         self.port = passive_port()
         port_to_send = ','.join(self.port[:2])
         self.port = self.port[2]
+        m = ''
         try:
             to_send = '227 Entering passive mode (%s,%s)\r\n' % (ip_to_send, port_to_send)
             client.send(to_send)
             self.connection_type = 'Passive'
-            return
+            m = 'MODE --> passive'
         except socket.error as e:
             print e
             to_send = '421 Falied to enter passive mode\r\n'
+            m = "Unable to enter passive mode."
 
         client.send(to_send)
+        return m
 
     def active_connection(self, client, args):
         """
@@ -285,9 +306,11 @@ class Commands(object):
             self.port = int(connection[4]) * 256 + int(connection[5])
             self.connection_type = 'Active'
             client.send('200 Connected\r\n')
+            return 'An active connection data was sent.'
         except ValueError as e:
             print e
             client.send('501 Could not establish data connection\r\n')
+            return 'An active connection was attempted but terminated.'
 
     def list_command(self, client, args):
         """
@@ -309,6 +332,7 @@ class Commands(object):
         transfer_client.close()
 
         client.send('226 Directory send OK.\r\n')
+        return FILE_DIR + "\'s list was requested"
 
     def transfer_connection(self):
         """
@@ -351,9 +375,28 @@ class Commands(object):
                 pass
             self.last_file_position = 0
             client.send('226 Transfer complete.\r\n')
+            return 'Client requested %s file. transfer completed.' % path
 
         else:
             client.send('550 File does not exist\r\n')
+            return 'Client requested %s file. transfer incomplete.' % path
+
+
+    def store_something(self, client, args):
+        transfer_client, transfer_socket = self.transfer_connection()
+        try:
+            with open(args[0], 'w' + self.binary_flag) as upload:
+                print 'starting transfer...'  # change it into log
+                x = transfer_client.recv(1024)
+                while not nothing_value(x):
+                    upload.write(x)
+                    print x
+                    x = transfer_client.recv(1024)
+            client.send('226 transfer complete\r\n')
+            return "Upload process finished."
+        except socket.error as e:
+            return e
+
 
     def reset_transfer(self, client, args):
         try:
@@ -365,10 +408,13 @@ class Commands(object):
         request = client.recv(1024)
         if 'RETR' in request:
             self.retrieve_file(client, request.split()[ARGS:])
-#        elif 'STOR' in request:
-            # command for storing a file, client upload
+            return 'A successful attempt to renew the data transfer.'
+
+        #        elif 'STOR' in request:
+        # command for storing a file, client upload
         else:
             client.send('503 Wrong order of commands\r\n')
+            return 'A failed attempt to renew the data transfer.'
 
     @staticmethod
     def return_size(client, args):
@@ -378,18 +424,7 @@ class Commands(object):
         """
         path = ' '.join(args)
         client.send('213 %s\r\n' % str(os.path.getsize(path)))
-
-    def store_something(self, client, args):
-        stop = False
-        transfer_client, transfer_socket = self.transfer_connection()
-        with open(args[0], 'w'+self.binary_flag) as upload:
-            while not stop:
-                try:
-                    upload.write(transfer_client.recv(1024))
-                except socket.error:
-                    client.send('226 transfer complete\r\n')
-                    stop = True
-        print 'process ended'
+        return '%s\'s file size was sent. data = %s.' % (path, str(os.path.getsize(path)))
 
 
 def main():
