@@ -23,6 +23,7 @@ from database import Users
 
 import threading
 import os
+import socket
 
 ORIGINAL_DIR = os.getcwd()
 users = Users(os.getcwd())
@@ -127,7 +128,7 @@ class ServerSetupContent(RelativeLayout):
 
     def start_server(self, instance):
         try:
-            self.server = Server(int(self.port.text), self.output_log, '192.168.1.17')
+            self.server = Server(int(self.port.text), self.output_log, socket.gethostbyname(socket.gethostname()))
         except ValueError:
             self.output_log.add_text('invalid character')
             return
