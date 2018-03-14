@@ -34,9 +34,10 @@ class Server(Commands):
         self.connections = []
         # output gui
         self.logger = logger
+        self.online = True
 
     def run(self):
-        while True:  # change to specified number
+        while self.online: # can also add here max number of connections
             client, address = self.server_socket.accept()
             client.send('220 welcome\r\n')
 
@@ -47,34 +48,45 @@ class Server(Commands):
             self.connections.append(client)
 
     def main_loop(self, client, address):
-        request = client.recv(DATA).replace('\r\n', '')
-        while True:
-            print 'request = ' + request
-
-            if not request:  # or command === quit
-                self.connections.remove(client)
-                client.close()
-                self.logger.add_text('client at %s disconnected' % str(address))
-                break
-
-            command, args = get_command_args(request)
-            try:
-                self.logger.add_text(str(self.command_dict[command](client, args)))
-            except KeyError as e:
-                print e
-                client.send('500 command unknown\r\n')
-
+        this_client = '%s:%d -> ' % address
+        try:
             request = client.recv(DATA).replace('\r\n', '')
+            while self.online:
+                print 'request = ' + request
+
+                if not request:  # or command === quit
+                    self.connections.remove(client)
+                    client.close()
+                    self.logger.add_text('%sdisconnected' % this_client)
+                    break
+
+                command, args = get_command_args(request)
+                try:
+                    log = str(self.command_dict[command](client, args))
+                    print log
+                    self.logger.add_text(this_client + log)
+                #print self.command_dict[command](client, args)
+                except KeyError as e:
+                    print e
+                    client.send('500 command unknown\r\n')
+
+                request = client.recv(DATA).replace('\r\n', '')
+        except socket.error:
+            pass
+            # could remove because gui already prints the client disconnected
+            #if self.connections:
+            #    self.logger.add_text("Server closed client connection")
 
     def close_server(self):
         for connection in self.connections:
             connection.close()
 
         # print threading.activeCount()
+        self.online = False
         self.server_socket.close()
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        #s.connect((socket.gethostbyname(socket.gethostname()), 6000))
-        s.connect(('192.168.1.17', 6000))
+        s.connect((socket.gethostbyname(socket.gethostname()), 6000))
+        #s.connect(('192.168.1.17', 6000))
         s.close()
         self.logger.add_text('Closed Server')
 
