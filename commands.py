@@ -88,7 +88,7 @@ class Commands(object):
         users = Users(ORIGINAL_DIR.replace('\\%s' % FILE_DIR, ''))
         self.user_data = users.get_users_pass()
         self.command_dict = {'USER': self.user_check,
-                             'FEAT': self.get_features,
+                             #'FEAT': self.get_features, haven't implemented opts
                              'SYST': self.syst_command,
                              'CWD': self.cwd,
                              'PWD': self.pwd,
@@ -151,6 +151,7 @@ class Commands(object):
         """
         ok_code = '215'
         client.send(ok_code + " " + platform.system() + "\r\n")
+        return "Returned current system"
 
     def user_check(self, client, args):  # user check
         """
@@ -239,8 +240,10 @@ class Commands(object):
         if os.path.exists(path) and FILE_DIR in path:
             os.chdir(path)
             client.send(succesful_change)
+            return "Succesfully changed directory"
         else:
             client.send('550 Directory does not exist\r\n')
+            return "Falied to find directory"
 
     @staticmethod
     def get_features(client, args):
@@ -269,6 +272,8 @@ class Commands(object):
 
         client.send('200 flag changed\r\n')
 
+        return "Binary flag changed to %s" % str(args[0])
+
     def passive_connection(self, client, args):
         """
         PASV FTP command:
@@ -283,10 +288,11 @@ class Commands(object):
             to_send = '227 Entering passive mode (%s,%s)\r\n' % (ip_to_send, port_to_send)
             client.send(to_send)
             self.connection_type = 'Passive'
-            return
+            return "Passive connection mode established"
         except socket.error as e:
             print e
             to_send = '421 Falied to enter passive mode\r\n'
+            return "Passive connection mode falied to establish"
 
         client.send(to_send)
 
@@ -303,9 +309,11 @@ class Commands(object):
             self.port = int(connection[4]) * 256 + int(connection[5])
             self.connection_type = 'Active'
             client.send('200 Connected\r\n')
+            return "Active connection mode established"
         except ValueError as e:
             print e
             client.send('501 Could not establish data connection\r\n')
+            return "Active connection mode falied to establish"
 
     def list_command(self, client, args):
         """
@@ -327,6 +335,8 @@ class Commands(object):
         transfer_client.close()
 
         client.send('226 Directory send OK.\r\n')
+
+        return "Sent directory listing"
 
     def transfer_connection(self):
         """
@@ -361,6 +371,7 @@ class Commands(object):
                     if not contents:
                         break
                     transfer_client.send(contents)
+
             # close connections
             transfer_client.close()
             try:
@@ -369,9 +380,11 @@ class Commands(object):
                 pass
             self.last_file_position = 0
             client.send('226 Transfer complete.\r\n')
+            return "File transfer of <%s> complete" % path
 
         else:
             client.send('550 File does not exist\r\n')
+            return "File transfer of <%s> falied" % path
 
     def reset_transfer(self, client, args):
         try:
@@ -383,10 +396,13 @@ class Commands(object):
         request = client.recv(1024)
         if 'RETR' in request:
             self.retrieve_file(client, request.split()[ARGS:])
-#        elif 'STOR' in request:
-            # command for storing a file, client upload
+        elif 'STOR' in request:
+           	self.store_something(client, request.split()[ARGS:])
         else:
             client.send('503 Wrong order of commands\r\n')
+            return "Reset. Wrong order of commands"
+
+        return "Reset location of file transfer"
 
     @staticmethod
     def return_size(client, args):
@@ -396,6 +412,7 @@ class Commands(object):
         """
         path = ' '.join(args)
         client.send('213 %s\r\n' % str(os.path.getsize(path)))
+        return "Returned size of file <%s>" % path
 
     def store_something(self, client, args):
         stop = False
@@ -408,7 +425,7 @@ class Commands(object):
                 x = transfer_client.recv(1024)
 
         client.send('226 transfer complete\r\n')
-        print 'process ended'
+        return "Uploaded <%s> to server" % path
 
 
 def main():

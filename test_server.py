@@ -37,7 +37,7 @@ class Server(Commands):
         self.online = True
 
     def run(self):
-        while self.online:  # change to specified number
+        while self.online: # can also add here max number of connections
             client, address = self.server_socket.accept()
             client.send('220 welcome\r\n')
 
@@ -48,10 +48,10 @@ class Server(Commands):
             self.connections.append(client)
 
     def main_loop(self, client, address):
-        this_client = 'Address:%s Port:%d -> ' % address
+        this_client = '%s:%d -> ' % address
         try:
             request = client.recv(DATA).replace('\r\n', '')
-            while True:
+            while self.online:
                 print 'request = ' + request
 
                 if not request:  # or command === quit

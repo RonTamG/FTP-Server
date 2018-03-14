@@ -58,6 +58,7 @@ class DatabaseUsers(ScrollView):
 
         for user, password in self.user_pass:
             self.user_button = OptionsButton(text='user: %s, pass: %s' % (user, password), size_hint_y=None, user=user, password=password)
+            self.user_button.bind(font_size=lambda x: self.width/4)
             self.user_button.bind(on_press=self.user_button.dropdown_options.open)
             self.layout.add_widget(self.user_button)
 
@@ -68,12 +69,12 @@ class AddUser(RelativeLayout):
     def __init__(self, user_list, **kwargs):
         super(AddUser, self).__init__(**kwargs)
         self.user_list = user_list
-        self.username_input = TextInput(multiline=False, size_hint=(0.25, 0.15), pos_hint={'center_x': 0.8, 'center_y': 0.3})
+        self.username_input = TextInput(multiline=False, size_hint=(0.25, 0.15), pos_hint={'center_x': 0.8, 'center_y': 0.3}, font_size=self.height/2.5)
         self.add_widget(self.username_input)
-        self.password_input = TextInput(multiline=False, size_hint=(0.25, 0.15), pos_hint={'center_x': 0.8, 'center_y': 0.1})
+        self.password_input = TextInput(multiline=False, size_hint=(0.25, 0.15), pos_hint={'center_x': 0.8, 'center_y': 0.1}, font_size=self.height/2.5)
         self.password_input.bind(on_text_validate=self.add_to_database)
         self.add_widget(self.password_input)
-        self.button_add = Button(text='Add User', pos_hint={'center_x': 0.2, 'center_y': 0.2}, size_hint=(0.25, 0.4))
+        self.button_add = Button(text='Add User', pos_hint={'center_x': 0.2, 'center_y': 0.2}, size_hint=(0.25, 0.4), font_size=self.width/4)
         self.button_add.bind(on_press=self.add_to_database)
         self.add_widget(self.button_add)
 
@@ -129,6 +130,7 @@ class ServerSetupContent(RelativeLayout):
     def start_server(self, instance):
         try:
             self.server = Server(int(self.port.text), self.output_log, socket.gethostbyname(socket.gethostname()))
+            #self.server = Server(int(self.port.text), self.output_log, '192.168.1.32')
         except ValueError:
             self.output_log.add_text('invalid character')
             return
@@ -172,7 +174,7 @@ class ScrollableLabel(ScrollView):
 
     def __init__(self, **kwargs):
         super(ScrollableLabel, self).__init__(**kwargs)
-        self.label = Label(size_hint=(1, None), text_size=(self.width, None), size=Window.size)
+        self.label = Label(size_hint=(1, None), size=Window.size, font_size=self.width)
         self.label.bind(texture_size=self._set_summary_height)
         self.label.text_size = (self.label.width, None)
         self.add_widget(self.label)
@@ -198,7 +200,7 @@ class LogOutput(ScrollableLabel):
         self.label.color = 0, 0, 0, 0.5
         self.label.outline_color = 1, 1, 1, 1
         self.label.outline_width = 2
-        self.label.font_size = 16
+        self.label.font_size = self.width / 6
 
     def add_text(self, message):
         self.label.text += message + '\n'
